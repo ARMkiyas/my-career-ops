@@ -82,13 +82,15 @@ async function checkPlaywright() {
 
 // The browser tools (`browser_navigate` / `browser_snapshot`) that scan / pipeline /
 // apply rely on are provided by the Playwright MCP server, registered through a
-// project-level Claude Code config (`.mcp.json` or `.claude/settings.json`). When it
-// is absent, SPA job boards silently return empty or stale content (#522) — so doctor
-// surfaces it as a non-fatal warning rather than letting it fail invisibly.
+// project-level CLI config: `.mcp.json` (the cross-CLI standard), Claude Code
+// (`.claude/settings.json`), Kiro (`.kiro/settings/mcp.json`), or Gemini
+// (`.gemini/settings.json`). When it is absent, SPA job boards silently return empty
+// or stale content (#522) — so doctor surfaces it as a non-fatal warning rather than
+// letting it fail invisibly.
 const PLAYWRIGHT_MCP_WARNING = 'Playwright MCP tools not detected';
 
 function playwrightMcpConfigured(root) {
-  const configFiles = ['.mcp.json', '.claude/settings.json', '.claude/settings.local.json'];
+  const configFiles = ['.mcp.json', '.claude/settings.json', '.claude/settings.local.json', '.kiro/settings/mcp.json', '.gemini/settings.json'];
   for (const rel of configFiles) {
     const file = join(root, ...rel.split('/'));
     if (!existsSync(file)) continue;

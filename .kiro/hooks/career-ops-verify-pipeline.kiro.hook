@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "name": "career-ops: Verify pipeline integrity",
+  "description": "After a spec task completes, verify tracker/pipeline integrity (links, canonical statuses, dedup) so multi-offer runs never silently corrupt data/applications.md.",
+  "version": "1",
+  "when": {
+    "type": "postTaskExecution"
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "node verify-pipeline.mjs",
+    "timeout": 120
+  }
+}

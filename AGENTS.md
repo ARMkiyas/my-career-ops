@@ -44,7 +44,7 @@ To rollback: `node update-system.mjs rollback`
 
 ## What is career-ops
 
-AI-powered, CLI-agnostic job search automation: pipeline tracking, offer evaluation, CV generation, portal scanning, batch processing. Runs on any AI coding CLI that follows the [open agent skill standard](https://agentskills.io) (Claude Code, Codex, OpenCode, Qwen, Copilot, Kimi, Antigravity CLI). Legacy Gemini API evaluation remains available through `gemini-eval.mjs`.
+AI-powered, CLI-agnostic job search automation: pipeline tracking, offer evaluation, CV generation, portal scanning, batch processing. Runs on any AI coding CLI that follows the [open agent skill standard](https://agentskills.io) (Claude Code, Codex, OpenCode, Qwen, Copilot, Kimi, Antigravity CLI, Kiro). Legacy Gemini API evaluation remains available through `gemini-eval.mjs`.
 
 ### Main Files
 
@@ -281,6 +281,8 @@ When spawning headless workers for batch processing, use the appropriate command
 | Codex | `codex exec "prompt"` |
 | Qwen | `qwen -p "prompt"` |
 | Antigravity CLI | `agy -p "prompt"` |
+
+> **Kiro** runs career-ops through its IDE agent (steering at `.kiro/steering/career-ops.md` + MCP at `.kiro/settings/mcp.json`); it has no headless pipe worker. For batch runs under Kiro, drive parallelism with Kiro sub-agents, or shell out to one of the headless CLIs above.
 
 ## Stack and Conventions
 
