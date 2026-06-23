@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "career-ops: Validate portals on save",
+  "description": "Validate portals.yml whenever it is edited so scanner config errors (duplicate companies, malformed slugs) are caught immediately instead of at scan time.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "portals.yml"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "node validate-portals.mjs",
+    "timeout": 60
+  }
+}

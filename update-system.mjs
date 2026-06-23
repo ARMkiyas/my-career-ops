@@ -114,6 +114,9 @@ const SYSTEM_PATHS = [
   '.claude-plugin/',
   '.qwen/',
   '.antigravitycli/skills/',
+  '.kiro/skills/',
+  '.kiro/steering/career-ops.md',
+  '.kiro/hooks/',
   'docs/',
   'writing-samples/README.md',
   'VERSION',
@@ -160,6 +163,10 @@ const SKILL_ENTRYPOINTS = [
   },
   {
     path: '.opencode/skills/career-ops/SKILL.md',
+    pointer: '../../../.agents/skills/career-ops/SKILL.md',
+  },
+  {
+    path: '.kiro/skills/career-ops/SKILL.md',
     pointer: '../../../.agents/skills/career-ops/SKILL.md',
   },
 ];

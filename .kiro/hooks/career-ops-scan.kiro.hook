@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "name": "career-ops: Scan for new offers",
+  "description": "Runs the career-ops scan mode to discover new job offers from configured portals, then orchestrates evaluation of any new URLs via Kiro sub-agents.",
+  "version": "1",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run the career-ops `scan` mode: load `.kiro/steering/career-ops.md`, `modes/_shared.md` and `modes/scan.md`, then execute the zero-token portal scan (`node scan.mjs`). For any newly discovered URLs, follow the \"Parallel pipeline & batch on Kiro (sub-agent orchestration)\" procedure in the steering file — liveness sweep, serial JD capture via Playwright, reserve report numbers, then fan out evaluation to up to 5 `general-task-execution` sub-agents. Finish with merge-tracker.mjs, reconcile-pipeline.mjs and verify-pipeline.mjs, and report the summary table. Never submit applications; stop at report + PDF."
+  }
+}
