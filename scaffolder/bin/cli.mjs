@@ -25,6 +25,7 @@ const SUPPORTED_CLIS = [
   { name: "OpenCode", cmd: "opencode" },
   { name: "GitHub Copilot CLI", cmd: "copilot" },
   { name: "Antigravity CLI", cmd: "agy" },
+  { name: "Kiro", cmd: "kiro" },
 ];
 
 const USAGE = `career-ops — set up an AI job search workspace.

@@ -120,6 +120,13 @@ export function parseSmartRecruitersResponse(json, companyName) {
         url = `https://jobs.smartrecruiters.com/${companySlug}/${j.id}-${slugified}`;
       }
     }
-    return { title: j.name || '', url, location, company: companyName };
+    return { title: j.name || '', url, location, company: companyName, ...(toSrEpochMs(j.releasedDate) != null ? { postedAt: toSrEpochMs(j.releasedDate) } : {}) };
   });
+}
+
+// NaN-safe Date.parse for SmartRecruiters' ISO `releasedDate`.
+function toSrEpochMs(value) {
+  if (!value) return undefined;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
 }

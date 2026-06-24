@@ -468,6 +468,9 @@ const systemFiles = [
   '.claude/skills/career-ops/SKILL.md',
   '.opencode/skills/career-ops/SKILL.md',
   '.antigravitycli/skills/career-ops/SKILL.md',
+  '.kiro/skills/career-ops/SKILL.md',
+  '.kiro/steering/career-ops.md',
+  '.kiro/settings/mcp.json',
 ];
 
 for (const f of systemFiles) {
@@ -475,6 +478,59 @@ for (const f of systemFiles) {
     pass(`System file exists: ${f}`);
   } else {
     fail(`Missing system file: ${f}`);
+  }
+}
+
+// ── Kiro integration: MCP config + Agent Hooks ──────────────────
+{
+  const mcpRaw = readFile('.kiro/settings/mcp.json');
+  let mcp = null;
+  try {
+    mcp = JSON.parse(mcpRaw);
+  } catch (e) {
+    fail(`.kiro/settings/mcp.json is not valid JSON: ${e.message}`);
+  }
+  if (mcp) {
+    const pw = mcp.mcpServers && mcp.mcpServers.playwright;
+    if (pw && pw.command === 'npx') {
+      pass('.kiro/settings/mcp.json: playwright server uses npx (portable, no Bun dependency)');
+    } else if (pw) {
+      fail(`.kiro/settings/mcp.json: playwright server should use npx for portability, got "${pw.command}"`);
+    } else {
+      fail('.kiro/settings/mcp.json: missing required "playwright" server');
+    }
+  }
+
+  const hooks = [
+    '.kiro/hooks/career-ops-scan.kiro.hook',
+    '.kiro/hooks/career-ops-verify-pipeline.kiro.hook',
+    '.kiro/hooks/career-ops-validate-portals.kiro.hook',
+  ];
+  const VALID_HOOK_EVENTS = new Set([
+    'fileEdited', 'fileCreated', 'fileDeleted', 'userTriggered', 'promptSubmit',
+    'agentStop', 'preToolUse', 'postToolUse', 'preTaskExecution', 'postTaskExecution',
+  ]);
+  for (const h of hooks) {
+    if (!fileExists(h)) {
+      fail(`Missing Kiro hook: ${h}`);
+      continue;
+    }
+    let hook = null;
+    try {
+      hook = JSON.parse(readFile(h));
+    } catch (e) {
+      fail(`${h} is not valid JSON: ${e.message}`);
+      continue;
+    }
+    const okShape = hook.name && hook.when && hook.when.type && hook.then && hook.then.type;
+    const okEvent = hook.when && VALID_HOOK_EVENTS.has(hook.when.type);
+    if (okShape && okEvent) {
+      pass(`Kiro hook valid: ${h} (${hook.when.type} → ${hook.then.type})`);
+    } else if (!okEvent) {
+      fail(`${h} has invalid event type: ${hook.when && hook.when.type}`);
+    } else {
+      fail(`${h} is missing required name/when/then fields`);
+    }
   }
 }
 
@@ -1132,6 +1188,7 @@ const symlinks = [
   '.claude/skills/career-ops/SKILL.md',
   '.opencode/skills/career-ops/SKILL.md',
   '.antigravitycli/skills/career-ops/SKILL.md',
+  '.kiro/skills/career-ops/SKILL.md',
 ];
 
 let canonicalReal = null;

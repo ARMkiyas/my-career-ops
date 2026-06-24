@@ -226,6 +226,28 @@ export function buildContentFilter(contentFilter) {
   };
 }
 
+// ── Freshness filter ────────────────────────────────────────────────
+// Optional recency window. Disabled unless a window is set via
+// `freshness_filter.max_age_days` in portals.yml or a CLI flag
+// (--last-24h, --last-7d, --since-hours=N, --since-days=N). --all-time disables.
+//
+// Semantics:
+//   - maxAgeMs falsy / <= 0 → filter disabled (everything passes)
+//   - job has a usable numeric postedAt → keep iff postedAt >= now - maxAgeMs
+//   - job has NO usable postedAt → keep only when keepUndated is true.
+//     Default is to DROP undated jobs so "last 24h"/"last 7d" stay precise;
+//     pass --keep-undated (or freshness_filter.keep_undated: true) to keep them.
+//     Note: a few sources (e.g. solidjobs, bamboohr) don't expose a date, so
+//     they contribute nothing while a strict window is active.
+export function buildFreshnessFilter({ maxAgeMs = null, keepUndated = false, now = Date.now() } = {}) {
+  if (!maxAgeMs || maxAgeMs <= 0) return () => true;
+  const cutoff = now - maxAgeMs;
+  return (postedAt) => {
+    if (typeof postedAt !== 'number' || !Number.isFinite(postedAt)) return keepUndated;
+    return postedAt >= cutoff;
+  };
+}
+
 // ── Salary filter ───────────────────────────────────────────────────
 // Optional. If `salary_filter` is absent from portals.yml, all salaries pass.
 // Semantics:
@@ -734,6 +756,16 @@ async function main() {
   // --rediscover-404: when a tracked company's URL 404/410s, search for the
   // moved role and re-verify before marking it expired. Opt-in; rides on --verify.
   const rediscover = args.includes('--rediscover-404');
+  // Freshness window flags (recency by posting date). Precedence: --all-time
+  // disables; otherwise the most specific CLI flag wins; otherwise portals.yml
+  // freshness_filter.max_age_days (if set) supplies the default window.
+  const flagValue = (name) => {
+    const a = args.find(x => x === name || x.startsWith(`${name}=`));
+    if (a === undefined) return undefined;
+    const v = a.includes('=') ? a.split('=').slice(1).join('=') : '';
+    return v;
+  };
+  const keepUndated = args.includes('--keep-undated');
   const companyFlag = args.indexOf('--company');
   const filterCompany = companyFlag !== -1 ? args[companyFlag + 1]?.toLowerCase() : null;
 
@@ -764,6 +796,30 @@ async function main() {
   const locationFilter = buildLocationFilter(config.location_filter);
   const salaryFilter = buildSalaryFilter(config.salary_filter);
   const contentFilter = buildContentFilter(config.content_filter);
+
+  // Resolve the effective freshness window (ms). CLI overrides portals.yml.
+  const HOUR_MS = 3_600_000;
+  const DAY_MS = 86_400_000;
+  let maxAgeMs = null;
+  let freshnessLabel = '';
+  const cfgFresh = (config.freshness_filter && typeof config.freshness_filter === 'object') ? config.freshness_filter : {};
+  const cfgDays = Number(cfgFresh.max_age_days);
+  if (Number.isFinite(cfgDays) && cfgDays > 0) { maxAgeMs = cfgDays * DAY_MS; freshnessLabel = `${cfgDays}d (config)`; }
+  const sinceHours = Number(flagValue('--since-hours'));
+  const sinceDays = Number(flagValue('--since-days'));
+  if (args.includes('--all-time') || args.includes('--no-freshness')) {
+    maxAgeMs = null; freshnessLabel = 'all-time';
+  } else if (args.includes('--last-24h') || args.includes('--last24h')) {
+    maxAgeMs = 24 * HOUR_MS; freshnessLabel = 'last 24h';
+  } else if (args.includes('--last-7d') || args.includes('--last7d')) {
+    maxAgeMs = 7 * DAY_MS; freshnessLabel = 'last 7d';
+  } else if (Number.isFinite(sinceHours) && sinceHours > 0) {
+    maxAgeMs = sinceHours * HOUR_MS; freshnessLabel = `last ${sinceHours}h`;
+  } else if (Number.isFinite(sinceDays) && sinceDays > 0) {
+    maxAgeMs = sinceDays * DAY_MS; freshnessLabel = `last ${sinceDays}d`;
+  }
+  const keepUndatedEffective = keepUndated || cfgFresh.keep_undated === true;
+  const freshnessFilter = buildFreshnessFilter({ maxAgeMs, keepUndated: keepUndatedEffective });
 
   // 3. Resolve a provider for each enabled company / board
   const targets = [];
@@ -821,6 +877,7 @@ async function main() {
   parts.push(`${localParserCount} local parser`);
   parts.push(`${skippedCount} skipped — no provider matched`);
   console.log(`Scanning ${parts.join('; ')} via providers`);
+  if (maxAgeMs) console.log(`Freshness window: ${freshnessLabel}${keepUndatedEffective ? ' (keeping undated)' : ' (dropping undated)'}`);
   if (dryRun) console.log('(dry run — no files will be written)\n');
 
   // 4. Load dedup sets
@@ -836,6 +893,7 @@ async function main() {
   let totalFilteredLocation = 0;
   let totalFilteredSalary = 0;
   let totalFilteredContent = 0;
+  let totalFilteredFreshness = 0;
   let totalDupes = 0;
   const newOffers = [];
   const errors = [...resolveErrors];
@@ -880,6 +938,10 @@ async function main() {
         }
         if (!contentFilter(job.description)) {
           totalFilteredContent++;
+          continue;
+        }
+        if (!freshnessFilter(job.postedAt)) {
+          totalFilteredFreshness++;
           continue;
         }
         if (seenUrls.has(job.url)) {
@@ -980,6 +1042,7 @@ async function main() {
   console.log(`Filtered by location:  ${totalFilteredLocation} removed`);
   console.log(`Filtered by salary:   ${totalFilteredSalary} removed`);
   console.log(`Filtered by content:  ${totalFilteredContent} removed`);
+  if (maxAgeMs) console.log(`Filtered by freshness: ${totalFilteredFreshness} removed (window: ${freshnessLabel}${keepUndatedEffective ? ', keep-undated' : ''})`);
   console.log(`Duplicates:            ${totalDupes} skipped`);
   if (historyPolicy.recheckAfterDays != null) {
     console.log(`Recheck eligible:      ${seenUrlState.recheckEligible} old scan-history URL(s)`);

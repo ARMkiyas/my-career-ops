@@ -109,6 +109,15 @@ export function parseRecruiteeResponse(json, companyName) {
       url,
       location,
       company: companyName,
+      // Recruitee offers expose an ISO `published_at`; NaN-safe parse, omit if absent.
+      ...(toRecruiteeEpochMs(j.published_at) != null ? { postedAt: toRecruiteeEpochMs(j.published_at) } : {}),
     };
   });
+}
+
+// NaN-safe Date.parse for Recruitee's ISO `published_at`.
+function toRecruiteeEpochMs(value) {
+  if (!value) return undefined;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
 }

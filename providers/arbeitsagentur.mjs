@@ -88,12 +88,17 @@ export function normalizeJob(job) {
   const refnr = job && job.refnr;
   const title = String((job && job.titel) || '').trim();
   if (!refnr || !title) return null;
+  // aktuelleVeroeffentlichungsdatum is an ISO date ("2026-06-23"); NaN-safe parse.
+  const rawDate = job && job.aktuelleVeroeffentlichungsdatum;
+  const parsedDate = rawDate ? Date.parse(rawDate) : NaN;
+  const postedAt = Number.isNaN(parsedDate) ? undefined : parsedDate;
   return {
     title,
     url: DETAIL_BASE + encodeURIComponent(String(refnr)),
     company: String((job && job.arbeitgeber) || '').trim(),
     location: buildLocation(job && job.arbeitsort),
     refnr: String(refnr),
+    ...(postedAt != null ? { postedAt } : {}),
   };
 }
 

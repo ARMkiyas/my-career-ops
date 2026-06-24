@@ -21,7 +21,7 @@ This complements — does not replace — the per-URL liveness gate in `auto-pip
 1. **Read** `data/pipeline.md` → search for `- [ ]` items in the "Pending" section. Run the **Liveness sweep** (above) first and drop any expired entries before continuing.
 2. **For each surviving pending URL**:
    a. Claim the next sequential `REPORT_NUM` atomically by running `node reserve-report-num.mjs` (and release the sentinel using `node reserve-report-num.mjs --release <num>` after the report is written)
-   b. **Extract JD** using Playwright (browser_navigate + browser_snapshot) → WebFetch → WebSearch
+   b. **Extract JD**: for `linkedin.com/jobs/view/...` URLs, run `node linkedin-jd.mjs <url>` (login-free guest endpoint — returns full description + criteria); for all other URLs use Playwright (browser_navigate + browser_snapshot) → WebFetch → WebSearch
    c. If the URL is not accessible → mark as `- [!]` with a note and continue
    d. **Execute full auto-pipeline**: Evaluation A-F → Report .md → PDF (if score >= `auto_pdf_score_threshold`) → Tracker
    e. **Move from "Pending" to "Processed"**: `- [x] #NNN | URL | Company | Role | Score/5 | PDF ✅/❌`
@@ -56,7 +56,7 @@ This complements — does not replace — the per-URL liveness gate in `auto-pip
 3. **WebSearch (last resort):** Search in secondary portals that index the JD.
 
 **Special cases:**
-- **LinkedIn**: May require login → mark `[!]` and ask the user to paste the text
+- **LinkedIn**: Do **not** use Playwright/WebFetch on `linkedin.com/jobs/view/...` (the JD is gated behind login). Instead run `node linkedin-jd.mjs <url>` (or `--json`), which uses LinkedIn's public guest `jobPosting/<id>` endpoint to return the full description + criteria (seniority, employment type, function, industries) with no login. Only fall back to asking the user to paste the text if that returns nothing.
 - **PDF**: If the URL points to a PDF, read it directly with the Read tool
 - **`local:` prefix**: Read the local file. Example: `local:jds/linkedin-pm-ai.md` → read `jds/linkedin-pm-ai.md`
 
