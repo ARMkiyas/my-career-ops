@@ -11,6 +11,13 @@
 
 const FEED_URL = 'https://remotive.com/api/remote-jobs';
 
+// NaN-safe Date.parse — `|| undefined` would also coerce a valid epoch 0.
+function toEpochMs(value) {
+  if (!value) return undefined;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
 /** @type {Provider} */
 export default {
   id: 'remotive',
@@ -37,6 +44,7 @@ export default {
         url: j.url.trim(),
         company: typeof j.company_name === 'string' && j.company_name.trim() ? j.company_name.trim() : (entry.name || 'Remotive'),
         location: typeof j.candidate_required_location === 'string' ? j.candidate_required_location.trim() : '',
+        postedAt: toEpochMs(j.publication_date),
       }));
   },
 };

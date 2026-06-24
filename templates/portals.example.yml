@@ -116,6 +116,18 @@
 #     - "php"
 #     - "wordpress"
 
+# -- Freshness filter (optional, recency by posting date) --
+# Only surface jobs posted within the last N days. Providers that expose a
+# posting date (Greenhouse, Ashby, Lever, Workday, SmartRecruiters, Recruitee,
+# RemoteOK, Remotive, Working Nomads, Arbeitsagentur, LinkedIn) are filtered
+# precisely; sources without a date are dropped while a window is active unless
+# keep_undated is true. Omit this block entirely to disable date filtering.
+# CLI overrides: --last-24h, --last-7d, --since-hours=N, --since-days=N,
+# --all-time (disable), --keep-undated.
+# freshness_filter:
+#   max_age_days: 7
+#   keep_undated: false
+
 # -- Title filter --
 # The scanner uses these keywords to decide if a title is relevant.
 # At least 1 positive must match AND 0 negatives must match (case-insensitive).
@@ -1257,6 +1269,28 @@ tracked_companies:
 # Same title/location filtering and dedup apply.
 
 job_boards:
+
+  # ── LinkedIn (public guest jobs endpoint — zero-token, login-free) ──
+  # provider: linkedin parses LinkedIn's logged-out jobs search (no API key).
+  # Each `searches` entry is one LinkedIn keyword+location query; the scanner's
+  # title_filter narrows results to your roles afterward, so broad keywords work.
+  # `tpr` bounds server-side recency (r86400=24h, r604800=7d, r2592000=30d, ''=any);
+  # the freshness_filter / --last-24h / --last-7d flags then narrow precisely.
+  # sortByDate: true returns newest-first. Keep the number of boards small —
+  # scan.mjs runs boards CONCURRENTLY, so each board is a parallel request stream
+  # to LinkedIn (searches within a board run sequentially). Too many => HTTP 429.
+  # For full JD + criteria on a LinkedIn URL during the pipeline step, use the
+  # `linkedin-jd.mjs` CLI (also login-free).
+  - name: LinkedIn — DevOps/Cloud (example)
+    provider: linkedin
+    enabled: false
+    linkedin:
+      tpr: r2592000
+      pages: 1
+      sortByDate: true
+      searches:
+        - { keywords: "DevOps Engineer", location: "European Union" }
+        - { keywords: "Cloud Engineer", location: "United Arab Emirates" }
 
   # ── SolidJobs (Polish market) ──────────────────────────────────────
   # Public API — no auth needed. Division in URL path, campaign=career-ops for tracking.
