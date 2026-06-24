@@ -5,6 +5,11 @@ Scans configured job portals, filters by title relevance, and adds new offers to
 > **Note (v1.6+):** The default scanner (`scan.mjs` / `npm run scan`) is **zero-token** and uses structured sources: local parsers configured per company and public Greenhouse, Ashby, and Lever APIs. The levels with Playwright/WebSearch described below represent the **agent** workflow (executed by the AI agent), not what `scan.mjs` does. If a company does not have a local parser or a Greenhouse/Ashby/Lever API, `scan.mjs` will ignore it; in those cases, the agent must manually complete Level 1 (Playwright) or Level 3 (WebSearch).
 >
 > **Rule (v1.8+):** If a company's local parser completes successfully in Level 0, the agent **must not** repeat that company in Playwright (Level 1) or API (Level 2). In Level 3, general queries remain active, but results from companies already covered by a parser are discarded. See [Rule: Successful Local Parser](#rule-successful-local-parser--no-expensive-scraping-repetition).
+>
+> **Freshness window (recency by posting date):** `scan.mjs` filters to recently-posted roles using each provider's posting date (Greenhouse, Ashby, Lever, Workday, SmartRecruiters, Recruitee, RemoteOK, Remotive, Working Nomads, Arbeitsagentur). The default window comes from `freshness_filter.max_age_days` in `portals.yml` (currently 7 days). Override per run:
+> `--last-24h` (last 24 hours), `--last-7d`, `--since-hours=N`, `--since-days=N`, `--all-time` (disable / full backlog), `--keep-undated` (also keep jobs with no posting date; by default undated jobs are dropped while a window is active).
+>
+> **LinkedIn discovery + JD enrichment:** LinkedIn is scanned via `provider: linkedin` (public guest jobs endpoint — no login), configured under `job_boards:` in `portals.yml`. The scan returns the job card (title/company/location/date/URL) only. To get the **full description + criteria** (seniority, employment type, function, industries) for a LinkedIn URL during the pipeline step, run `node linkedin-jd.mjs <linkedin-job-url>` (add `--json` for machine-readable output) — it uses the guest `jobPosting/<id>` endpoint, also login-free. Prefer this over Playwright/web_fetch for `linkedin.com/jobs/view/...` URLs, which gate the JD behind login.
 
 ## Recommended Execution
 

@@ -9,6 +9,13 @@
 
 const FEED_URL = 'https://www.workingnomads.com/api/exposed_jobs/';
 
+// NaN-safe Date.parse — `|| undefined` would also coerce a valid epoch 0.
+function toEpochMs(value) {
+  if (!value) return undefined;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
 /** @type {Provider} */
 export default {
   id: 'workingnomads',
@@ -35,6 +42,7 @@ export default {
         url: j.url.trim(),
         company: typeof j.company_name === 'string' && j.company_name.trim() ? j.company_name.trim() : (entry.name || 'Working Nomads'),
         location: typeof j.location === 'string' ? j.location.trim() : '',
+        postedAt: toEpochMs(j.pub_date),
       }));
   },
 };

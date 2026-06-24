@@ -12,6 +12,13 @@
 
 const FEED_URL = 'https://remoteok.com/api';
 
+// NaN-safe Date.parse — `|| undefined` would also coerce a valid epoch 0.
+function toEpochMs(value) {
+  if (!value) return undefined;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+}
+
 /** @type {Provider} */
 export default {
   id: 'remoteok',
@@ -38,6 +45,8 @@ export default {
         url: j.url.trim(),
         company: typeof j.company === 'string' && j.company.trim() ? j.company.trim() : (entry.name || 'RemoteOK'),
         location: typeof j.location === 'string' ? j.location.trim() : '',
+        // RemoteOK ships `epoch` (unix seconds); fall back to parsing the ISO `date`.
+        postedAt: Number.isFinite(j.epoch) ? j.epoch * 1000 : toEpochMs(j.date),
       }));
   },
 };
